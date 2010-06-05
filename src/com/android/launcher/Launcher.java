@@ -113,7 +113,7 @@ import android.view.View.OnTouchListener;
 /**
  * Default launcher application.
  */
-public final class Launcher extends Activity implements View.OnClickListener, OnLongClickListener, OnTouchListener, MultiTouchObjectCanvas<Object> {
+public final class Launcher extends Activity implements View.OnClickListener, OnLongClickListener, MultiTouchObjectCanvas<Object> {
     static final String LOG_TAG = "Launcher";
     static final boolean LOGD = true;
 
@@ -687,7 +687,7 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         workspace.setOnLongClickListener(this);
         workspace.setDragger(dragLayer);
         workspace.setLauncher(this);
-        workspace.setOnTouchListener(this);
+        //workspace.setOnTouchListener(this);
 
         deleteZone.setLauncher(this);
         deleteZone.setDragController(dragLayer);
@@ -2032,27 +2032,52 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         return mDesktopLocked;
     }
     
+    /*
     public boolean onTouch(View v, MotionEvent e) {
 		return multiTouchController.onTouchEvent(e);
+    }
+    */
+    
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (multiTouchController.onTouchEvent(event)) {
+            return true;
+        }
+        return super.dispatchTouchEvent(event);
     }
     
     // Do nothing, but cannot return null    
     public Object getDraggableObjectAtPoint(PointInfo pt) {
-        return new Object();
+        return this;
     }
-
+    
+    // Wysie: There are times when setPositionAndScale does NOT happen despite the
+    // objPosAndScaleOut.set being used. When this occurs, long press event is
+    // invoked somehow. mWorkspace.canceLongPress() is used to help, but it does NOT
+    // seem to be working.
+    // Pinch in or out quickly to reproduce this bug.
     public void getPositionAndScale(Object obj, PositionAndScale objPosAndScaleOut) {
-        // Probably can do some fine tuning here
-        showPreviews(mHandleView, 0, mWorkspace.mHomeScreens);
+        objPosAndScaleOut.set(0.0f, 0.0f, 1.0f);
+        mWorkspace.cancelLongPress(); // No effect
     }
     
     // Do nothing
     public void selectObject(Object obj, PointInfo pt) {
     }
     
+	private static final double ZOOM_SENSITIVITY = 1.6;
+	private static final double ZOOM_LOG_BASE_INV = 1.0 / Math.log(2.0 / ZOOM_SENSITIVITY);
+    
     // Do nothing
-    public boolean setPositionAndScale(Object obj, PositionAndScale update, PointInfo touchPoint) {        
-        return false;
+    public boolean setPositionAndScale(Object obj, PositionAndScale update, PointInfo touchPoint) {
+        float newRelativeScale = update.getScale();
+        int targetZoom = (int) Math.round(Math.log(newRelativeScale) * ZOOM_LOG_BASE_INV);        
+        
+        if (targetZoom != 0) { // Change to > 0 or < 0 for pinch in/out. For now it'll work both ways.
+            showPreviews(mHandleView, 0, mWorkspace.mHomeScreens);
+        }
+         
+        return true;
     }
 
     public boolean onLongClick(View v) {
