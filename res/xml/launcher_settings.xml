@@ -158,12 +158,18 @@
 			android:title="@string/pref_title_hide_icon_labels"
 			android:summary="@string/pref_summary_hide_icon_labels"
 			android:defaultValue="false" />
+	    <Preference android:key="highlights_color"
+			android:title="@string/pref_title_icon_highlights"
+			android:summary="@string/pref_summary_icon_highlights"
+	        android:defaultValue="-16777216" />
+
 	</PreferenceScreen>
 	<PreferenceCategory android:title="@string/pref_title_build_info">
 		<Preference
 			android:key="donatePref"
 			android:layout="@layout/donate_link"/>
 		<Preference
+			android:key="adw_version"
 			android:title="@string/pref_title_adw_version"
 			android:summary="@string/adw_version"/>
 	</PreferenceCategory>

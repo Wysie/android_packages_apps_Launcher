@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import android.preference.PreferenceScreen;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.Preference.OnPreferenceClickListener;
 import android.util.Log;
@@ -22,9 +23,10 @@ import android.util.Log;
 public class MyLauncherSettings extends PreferenceActivity implements OnPreferenceChangeListener {
     private static final String ALMOSTNEXUS_PREFERENCES = "launcher.preferences.almostnexus";
     private boolean shouldRestart=false;
-    private static final String FROYOMSG="YOU NEED TO GO ANDROID SETTINGS/APPLICATIONS/MANAGE APPLICATIONS AND RESTART ADW.LAUNCHER AS SOON AS POSSIBLE OR IT WILL FORCECLOSE!!!";
+    private static final String FROYOMSG="Changing this setting will make the Launcher restart itself";
     private static final String NORMALMSG="Changing this setting will make the Launcher restart itself";
     private String mMsg;
+    private Context mContext;
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
 		//TODO: ADW should i read stored values after addPreferencesFromResource?
@@ -67,23 +69,29 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 		});
         Preference uiHideLabels = (Preference) findPreference("uiHideLabels");
         uiHideLabels.setOnPreferenceChangeListener(this);
+        Preference mDateColorPref = findPreference("highlights_color");
+        mContext=this;
     }
 	@Override
 	protected void onPause(){
 		if(shouldRestart){
-			Intent intent = new Intent(getApplicationContext(), Launcher.class);
-            PendingIntent sender = PendingIntent.getBroadcast(getApplicationContext(),0, intent, 0);
-
-            // We want the alarm to go off 30 seconds from now.
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(System.currentTimeMillis());
-            calendar.add(Calendar.SECOND, 1);
-
-            // Schedule the alarm!
-            AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
-            am.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), sender);
-   			ActivityManager acm = (ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
-	        acm.restartPackage("com.android.launcher");
+			if(Build.VERSION.SDK_INT<=7){
+				Intent intent = new Intent(getApplicationContext(), Launcher.class);
+	            PendingIntent sender = PendingIntent.getBroadcast(getApplicationContext(),0, intent, 0);
+	
+	            // We want the alarm to go off 30 seconds from now.
+	            Calendar calendar = Calendar.getInstance();
+	            calendar.setTimeInMillis(System.currentTimeMillis());
+	            calendar.add(Calendar.SECOND, 1);
+	
+	            // Schedule the alarm!
+	            AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
+	            am.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), sender);
+	   			ActivityManager acm = (ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+		        acm.restartPackage("com.android.launcher");
+			}else{
+				android.os.Process.killProcess(android.os.Process.myPid());
+			}
 		}
 		super.onPause();
 	}
@@ -134,8 +142,47 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 			       });
 			AlertDialog alert = builder.create();
 			alert.show();
+		}else if(preference.getKey().equals("highlights_color")){
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setMessage(mMsg)
+			       .setCancelable(false)
+			       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+			           public void onClick(DialogInterface dialog, int id) {
+							shouldRestart=true;
+			           }
+			       });
+			AlertDialog alert = builder.create();
+			alert.show();
 		}
         return true;  
+	}    
+
+    public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+        if (preference.getKey().equals("highlights_color")) {
+        	ColorPickerDialog cp = new ColorPickerDialog(this,mHighlightsColorListener,readHighlightsColor());
+        	cp.show();
+        }
+        return false;
 	}
-    
+	
+    private int readHighlightsColor() {
+    	return AlmostNexusSettingsHelper.getHighlightsColor(this);
+    }
+
+    ColorPickerDialog.OnColorChangedListener mHighlightsColorListener =
+    	new ColorPickerDialog.OnColorChangedListener() {
+    	public void colorChanged(int color) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+			builder.setMessage(mMsg)
+			       .setCancelable(false)
+			       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+			           public void onClick(DialogInterface dialog, int id) {
+							shouldRestart=true;
+			           }
+			       });
+			AlertDialog alert = builder.create();
+			alert.show();
+    		getPreferenceManager().getSharedPreferences().edit().putInt("highlights_color", color).commit();
+    	}
+};
 }

@@ -102,14 +102,18 @@ import java.io.DataInputStream;
 import com.android.launcher.DockBar.DockBarListener;
 import com.android.launcher.SliderView.OnTriggerListener;
 
-import android.view.View.OnTouchListener;
-import android.util.FloatMath;
+
+import demo.multitouch.controller.MultiTouchController;
+import demo.multitouch.controller.MultiTouchController.MultiTouchObjectCanvas;
+import demo.multitouch.controller.MultiTouchController.PointInfo;
+import demo.multitouch.controller.MultiTouchController.PositionAndScale;
 import android.view.MotionEvent;
+import android.view.View.OnTouchListener;
 
 /**
  * Default launcher application.
  */
-public final class Launcher extends Activity implements View.OnClickListener, OnLongClickListener, OnTouchListener {
+public final class Launcher extends Activity implements View.OnClickListener, OnLongClickListener, OnTouchListener, MultiTouchObjectCanvas<Object> {
     static final String LOG_TAG = "Launcher";
     static final boolean LOGD = true;
 
@@ -195,6 +199,8 @@ public final class Launcher extends Activity implements View.OnClickListener, On
 
     private DragLayer mDragLayer;
     private Workspace mWorkspace;
+    
+	private MultiTouchController<Object> multiTouchController;
 
     private AppWidgetManager mAppWidgetManager;
     private LauncherAppWidgetHost mAppWidgetHost;
@@ -285,6 +291,7 @@ public final class Launcher extends Activity implements View.OnClickListener, On
     @Override
     protected void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
+    	
         mInflater = getLayoutInflater();
 
         mAppWidgetManager = AppWidgetManager.getInstance(this);
@@ -326,6 +333,7 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         mDefaultKeySsb = new SpannableStringBuilder();
         Selection.setSelection(mDefaultKeySsb, 0);
         
+		multiTouchController = new MultiTouchController<Object>(this, getResources(), false);        
     }
 
     private void checkForLocaleChange() {
@@ -677,9 +685,9 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         }
 
         workspace.setOnLongClickListener(this);
-        workspace.setOnTouchListener(this);
         workspace.setDragger(dragLayer);
         workspace.setLauncher(this);
+        workspace.setOnTouchListener(this);
 
         deleteZone.setLauncher(this);
         deleteZone.setDragController(dragLayer);
@@ -2024,38 +2032,27 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         return mDesktopLocked;
     }
     
-    static final int NONE = 0;
-    static final int ZOOM = 2;
-    int mode = NONE;
-    
     public boolean onTouch(View v, MotionEvent e) {
-        switch (e.getAction() & MotionEvent.ACTION_MASK) {
-    
-            case MotionEvent.ACTION_POINTER_DOWN:
-                float oldDist = spacing(e);
-                if (oldDist > 10f) {
-                  mode = ZOOM;
-                  return true;
-                }
-                break;
-            case MotionEvent.ACTION_MOVE:
-                if (mode == ZOOM) {
-                    mode = NONE;
-                    float newDist = spacing(e);
-                    if (newDist > 10f) {
-                        showPreviews(mHandleView, 0, mWorkspace.mHomeScreens);
-                        return true;
-                    }
-                }
-                break;
-        }
-        return false;
+		return multiTouchController.onTouchEvent(e);
     }
     
-    private float spacing(MotionEvent event) {
-        float x = event.getX(0) - event.getX(1);
-        float y = event.getY(0) - event.getY(1);
-        return FloatMath.sqrt(x * x + y * y);
+    // Do nothing, but cannot return null    
+    public Object getDraggableObjectAtPoint(PointInfo pt) {
+        return new Object();
+    }
+
+    public void getPositionAndScale(Object obj, PositionAndScale objPosAndScaleOut) {
+        // Probably can do some fine tuning here
+        showPreviews(mHandleView, 0, mWorkspace.mHomeScreens);
+    }
+    
+    // Do nothing
+    public void selectObject(Object obj, PointInfo pt) {
+    }
+    
+    // Do nothing
+    public boolean setPositionAndScale(Object obj, PositionAndScale update, PointInfo touchPoint) {        
+        return false;
     }
 
     public boolean onLongClick(View v) {
