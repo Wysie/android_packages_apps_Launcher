@@ -96,8 +96,8 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         
         mContext=this;
         
-        Preference importXML = findPreference("xml_import");
-        importXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {
+        Preference importFromXML = findPreference("xml_import");
+        importFromXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {
 			public boolean onPreferenceClick(Preference preference) {
                 AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
                 alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
@@ -119,8 +119,8 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
             }
         });        
         
-        Preference exportXML = findPreference("xml_export");
-        exportXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
+        Preference exportToXML = findPreference("xml_export");
+        exportToXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
 			public boolean onPreferenceClick(Preference preference) {
                 AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
                 alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
@@ -263,8 +263,77 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
     	}
     };
     
-    private void importXML() {        
-        shouldRestart=true;
+    // Wysie: Lazy way
+    private void importXML() {
+        if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+            Toast.makeText(mContext, R.string.xml_sdcard_unmounted, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        FileReader reader = null;
+        boolean success = false;
+                
+        try {
+            reader = new FileReader(new File(Environment.getExternalStorageDirectory() + "/" + XML_FILENAME));
+            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+            XmlPullParser parser = factory.newPullParser();
+            parser.setInput(reader);
+            int eventType = parser.getEventType();
+            String prefType = null;
+            String prefValue = null;
+            SharedPreferences sp = mContext.getSharedPreferences(ALMOSTNEXUS_PREFERENCES, mContext.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sp.edit();
+            
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                switch (eventType) {
+                    case XmlPullParser.START_TAG:
+						prefType = parser.getName().trim();
+						if (!prefType.equalsIgnoreCase("adw_settings")) {
+						    prefValue = parser.nextText();
+						    
+						    if (prefType.equals("homeBinding")) {
+						        editor.putString(prefType, prefValue);
+						    }
+						    else {
+    						    try {
+	    					        editor.putInt(prefType, Integer.parseInt(prefValue));
+	    					    }
+	    					    catch (NumberFormatException e) {
+	    					        if (prefValue.equalsIgnoreCase("true") || prefValue.equalsIgnoreCase("false")) {
+	    					            editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+	    					        }
+	    					    }
+						    }
+						}						    
+						break;
+                }
+                eventType = parser.next();
+            }
+            editor.commit();
+            success = true;
+        }
+        catch (FileNotFoundException e) {
+            Toast.makeText(mContext, R.string.xml_file_not_found, Toast.LENGTH_SHORT).show();
+        }
+        catch (IOException e) {
+            Toast.makeText(mContext, R.string.xml_io_exception, Toast.LENGTH_SHORT).show();
+        }
+        catch (XmlPullParserException e) {
+            Toast.makeText(mContext, R.string.xml_parse_error, Toast.LENGTH_SHORT).show();
+        }
+        finally {
+            if (reader != null) {
+        		try {
+	        	    reader.close();
+	        	} catch (IOException e) {
+	        	}
+	        }
+        }
+        
+        if (success) {
+            Toast.makeText(mContext, R.string.xml_import_success, Toast.LENGTH_SHORT).show();
+            shouldRestart = true;
+        }
     }
     
     private void exportXML() {
