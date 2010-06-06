@@ -30,7 +30,7 @@ public class MultiTouchController<T> {
 	 * Time in ms required after a change in event status (e.g. putting down or lifting off the second finger) before events
 	 * actually do anything -- helps eliminate noisy jumps that happen on change of status
 	 */
-	private static final long EVENT_SETTLE_TIME_INTERVAL = 100;
+	private static final long EVENT_SETTLE_TIME_INTERVAL = 0; //Default: 100. Wysie: If set to 100, quick pinches are not triggered. 20 is nice too.
 
 	// The biggest possible abs val of the change in x or y between multitouch events
 	// (larger dx/dy events are ignored) -- helps eliminate jumping on finger 2 up/down

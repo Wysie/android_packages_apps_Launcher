@@ -102,18 +102,10 @@ import java.io.DataInputStream;
 import com.android.launcher.DockBar.DockBarListener;
 import com.android.launcher.SliderView.OnTriggerListener;
 
-
-import demo.multitouch.controller.MultiTouchController;
-import demo.multitouch.controller.MultiTouchController.MultiTouchObjectCanvas;
-import demo.multitouch.controller.MultiTouchController.PointInfo;
-import demo.multitouch.controller.MultiTouchController.PositionAndScale;
-import android.view.MotionEvent;
-import android.view.View.OnTouchListener;
-
 /**
  * Default launcher application.
  */
-public final class Launcher extends Activity implements View.OnClickListener, OnLongClickListener, MultiTouchObjectCanvas<Object> {
+public final class Launcher extends Activity implements View.OnClickListener, OnLongClickListener {
     static final String LOG_TAG = "Launcher";
     static final boolean LOGD = true;
 
@@ -199,8 +191,6 @@ public final class Launcher extends Activity implements View.OnClickListener, On
 
     private DragLayer mDragLayer;
     private Workspace mWorkspace;
-    
-	private MultiTouchController<Object> multiTouchController;
 
     private AppWidgetManager mAppWidgetManager;
     private LauncherAppWidgetHost mAppWidgetHost;
@@ -332,8 +322,6 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         // For handling default keys
         mDefaultKeySsb = new SpannableStringBuilder();
         Selection.setSelection(mDefaultKeySsb, 0);
-        
-		multiTouchController = new MultiTouchController<Object>(this, getResources(), false);        
     }
 
     private void checkForLocaleChange() {
@@ -2037,50 +2025,8 @@ public final class Launcher extends Activity implements View.OnClickListener, On
 		return multiTouchController.onTouchEvent(e);
     }
     */
-    
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
-        if (multiTouchController.onTouchEvent(event)) {
-            return true;
-        }
-        return super.dispatchTouchEvent(event);
-    }
-    
-    // Do nothing, but cannot return null    
-    public Object getDraggableObjectAtPoint(PointInfo pt) {
-        return this;
-    }
-    
-    // Wysie: There are times when setPositionAndScale does NOT happen despite the
-    // objPosAndScaleOut.set being used. When this occurs, long press event is
-    // invoked somehow. mWorkspace.canceLongPress() is used to help, but it does NOT
-    // seem to be working.
-    // Pinch in or out quickly to reproduce this bug.
-    public void getPositionAndScale(Object obj, PositionAndScale objPosAndScaleOut) {
-        objPosAndScaleOut.set(0.0f, 0.0f, 1.0f);
-        mWorkspace.cancelLongPress(); // No effect
-    }
-    
-    // Do nothing
-    public void selectObject(Object obj, PointInfo pt) {
-    }
-    
-	private static final double ZOOM_SENSITIVITY = 1.6;
-	private static final double ZOOM_LOG_BASE_INV = 1.0 / Math.log(2.0 / ZOOM_SENSITIVITY);
-    
-    // Do nothing
-    public boolean setPositionAndScale(Object obj, PositionAndScale update, PointInfo touchPoint) {
-        float newRelativeScale = update.getScale();
-        int targetZoom = (int) Math.round(Math.log(newRelativeScale) * ZOOM_LOG_BASE_INV);        
-        
-        if (targetZoom != 0) { // Change to > 0 or < 0 for pinch in/out. For now it'll work both ways.
-            showPreviews(mHandleView, 0, mWorkspace.mHomeScreens);
-        }
-         
-        return true;
-    }
 
-    public boolean onLongClick(View v) {
+    public boolean onLongClick(View v) {        
         if (mDesktopLocked) {
             return false;
         }
@@ -2862,6 +2808,10 @@ public final class Launcher extends Activity implements View.OnClickListener, On
         }else{
         	showPreviews(anchor, 0, mWorkspace.getChildCount());
         }
+    }
+    
+    public void showPreviews() {
+        showPreviews(mHandleView, 0, mWorkspace.mHomeScreens);    
     }
 
     private void showPreviews(final View anchor, int start, int end) {
