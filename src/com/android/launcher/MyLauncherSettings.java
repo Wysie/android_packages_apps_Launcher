@@ -1,7 +1,5 @@
 package com.android.launcher;
 
-import java.util.Calendar;
-
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
@@ -16,11 +14,11 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
-import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.Preference.OnPreferenceClickListener;
-import android.util.Log;
+
+import java.util.Calendar;
 
 import java.io.FileReader;
 import org.xmlpull.v1.XmlPullParser;
@@ -56,26 +54,26 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         super.onCreate(savedInstanceState);
         getPreferenceManager().setSharedPreferencesName(ALMOSTNEXUS_PREFERENCES);
         addPreferencesFromResource(R.xml.launcher_settings);
-        dlgSeekBarPreference desktopScreens= (dlgSeekBarPreference) findPreference("desktopScreens");
+        DialogSeekBarPreference desktopScreens= (DialogSeekBarPreference) findPreference("desktopScreens");
         desktopScreens.setMin(2);
         desktopScreens.setOnPreferenceChangeListener(this);
-        dlgSeekBarPreference defaultScreen= (dlgSeekBarPreference) findPreference("defaultScreen");
+        DialogSeekBarPreference defaultScreen= (DialogSeekBarPreference) findPreference("defaultScreen");
         defaultScreen.setMin(1);
         defaultScreen.setMax(AlmostNexusSettingsHelper.getDesktopScreens(this)-1);
         defaultScreen.setOnPreferenceChangeListener(this);
         Preference drawerNew = (Preference) findPreference("drawerNew");
         drawerNew.setOnPreferenceChangeListener(this);
-        dlgSeekBarPreference columnsPortrait= (dlgSeekBarPreference) findPreference("drawerColumnsPortrait");
+        DialogSeekBarPreference columnsPortrait= (DialogSeekBarPreference) findPreference("drawerColumnsPortrait");
         columnsPortrait.setMin(1);
-        dlgSeekBarPreference rowsPortrait= (dlgSeekBarPreference) findPreference("drawerRowsPortrait");
+        DialogSeekBarPreference rowsPortrait= (DialogSeekBarPreference) findPreference("drawerRowsPortrait");
         rowsPortrait.setMin(1);
-        dlgSeekBarPreference columnsLandscape= (dlgSeekBarPreference) findPreference("drawerColumnsLandscape");
+        DialogSeekBarPreference columnsLandscape= (DialogSeekBarPreference) findPreference("drawerColumnsLandscape");
         columnsLandscape.setMin(1);
-        dlgSeekBarPreference rowsLandscape= (dlgSeekBarPreference) findPreference("drawerRowsLandscape");
+        DialogSeekBarPreference rowsLandscape= (DialogSeekBarPreference) findPreference("drawerRowsLandscape");
         rowsLandscape.setMin(1);
-        dlgSeekBarPreference zoomSpeed= (dlgSeekBarPreference) findPreference("zoomSpeed");
+        DialogSeekBarPreference zoomSpeed= (DialogSeekBarPreference) findPreference("zoomSpeed");
         zoomSpeed.setMin(300);
-        dlgSeekBarPreference uiScaleAB= (dlgSeekBarPreference) findPreference("uiScaleAB");
+        DialogSeekBarPreference uiScaleAB= (DialogSeekBarPreference) findPreference("uiScaleAB");
         uiScaleAB.setMin(1);
         Preference donateLink = (Preference) findPreference("donatePref");
         donateLink.setOnPreferenceClickListener(new OnPreferenceClickListener() {
@@ -92,8 +90,6 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 		
         Preference uiHideLabels = (Preference) findPreference("uiHideLabels");
         uiHideLabels.setOnPreferenceChangeListener(this);
-        Preference mDateColorPref = findPreference("highlights_color");
-        
         mContext=this;
         
         Preference importFromXML = findPreference("xml_import");
@@ -170,7 +166,7 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 	
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
 		if (preference.getKey().equals("desktopScreens")) {
-			dlgSeekBarPreference pref = (dlgSeekBarPreference) findPreference("defaultScreen");
+			DialogSeekBarPreference pref = (DialogSeekBarPreference) findPreference("defaultScreen");
 			pref.setMax((Integer) newValue+1);
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setMessage(mMsg)
@@ -288,23 +284,110 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
                 switch (eventType) {
                     case XmlPullParser.START_TAG:
 						prefType = parser.getName().trim();
-						if (!prefType.equalsIgnoreCase("adw_settings")) {
-						    prefValue = parser.nextText();
-						    
-						    if (prefType.equals("homeBinding")) {
-						        editor.putString(prefType, prefValue);
-						    }
-						    else {
-    						    try {
-	    					        editor.putInt(prefType, Integer.parseInt(prefValue));
-	    					    }
-	    					    catch (NumberFormatException e) {
-	    					        if (prefValue.equalsIgnoreCase("true") || prefValue.equalsIgnoreCase("false")) {
-	    					            editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-	    					        }
-	    					    }
-						    }
-						}						    
+						
+						if (prefType.equals("adw_settings")) {
+						    break;
+						}
+						
+						prefValue = parser.nextText();
+						
+						// Handle all booleans
+						if (prefValue.equals("true") || prefValue.equals("false")) {
+						    editor.putBoolean(prefType, prefValue.equals("true"));
+						}
+						// Handle the rest
+						else if (prefType.equals("desktopScreens")) {
+						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 2));
+						}
+						else if (prefType.equals("defaultScreen")) {
+						    editor.putInt(prefType, Integer.parseInt(prefValue));
+						}
+						else if (prefType.equals("desktopSpeed")) {
+						    editor.putInt(prefType, Integer.parseInt(prefValue));
+						}
+						else if (prefType.equals("desktopBounce")) {
+						    editor.putInt(prefType, Integer.parseInt(prefValue));
+						}
+						else if (prefType.equals("zoomSpeed")) {
+						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 300));
+						}
+						else if (prefType.equals("drawerAlpha")) {
+						    editor.putInt(prefType, Integer.parseInt(prefValue));
+						}
+						else if (prefType.equals("drawerColumnsPortrait")) {
+						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
+						}
+						else if (prefType.equals("drawerRowsPortrait")) {
+						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
+						}
+						else if (prefType.equals("drawerColumnsLandscape")) {
+						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
+						}
+						else if (prefType.equals("drawerRowsLandscape")) {
+						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
+						}
+						else if (prefType.equals("homeBinding")) {
+						    editor.putString(prefType, prefValue);
+						}
+						else if (prefType.equals("uiScaleAB")) {
+						    float value = Float.parseFloat(prefValue) * 10f;
+						    editor.putInt(prefType, Math.round(value - 1));
+						}
+						else if (prefType.equals("highlights_color")) {
+						    editor.putInt(prefType, Integer.parseInt(prefValue));
+						}
+						
+						/*
+						if (prefType.equals("wallpaperHack")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("desktopRotation")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("hideStatusbar")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("drawerNew")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("drawerAnimated")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("previewsNew")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("previewsFullScreen")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiDots")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiDockbar")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiCloseDockbar")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiLAB")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiRAB")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiTint")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiAppsBg")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}						
+						else if (prefType.equals("uiABBg")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						else if (prefType.equals("uiHideLabels")) {
+						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
+						}
+						*/
+
 						break;
                 }
                 eventType = parser.next();

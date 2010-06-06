@@ -252,7 +252,7 @@
     <string name="pref_title_icon_highlights">Highlights color</string>
     <string name="pref_summary_icon_highlights">Set the color for icon selections</string>
     
-    <string name="pref_title_xml">Import/Export settings</string>
+    <string name="pref_title_xml">Import/export settings</string>
     <string name="pref_title_xml_import">Import settings from XML</string>
     <string name="pref_summary_xml_import">Import from /sdcard/adw_settings.xml</string>
     <string name="pref_title_xml_export">Export settings to XML</string>
