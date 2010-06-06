@@ -251,4 +251,24 @@
     
     <string name="pref_title_icon_highlights">Highlights color</string>
     <string name="pref_summary_icon_highlights">Set the color for icon selections</string>
+    
+    <string name="pref_title_xml">Import/Export settings</string>
+    <string name="pref_title_xml_import">Import settings from XML</string>
+    <string name="pref_summary_xml_import">Import from /sdcard/adw_settings.xml</string>
+    <string name="pref_title_xml_export">Export settings to XML</string>
+    <string name="pref_summary_xml_export">Export to /sdcard/adw_settings.xml</string>
+    
+    <!-- XML Import/Export strings -->
+    <string name="xml_file_not_found">XML file not found!</string>
+    <string name="xml_io_exception">Error reading file!</string>
+    <string name="xml_parse_error">Error parsing XML!</string>
+    <string name="xml_import_success">XML import successful!</string>    
+    <string name="xml_write_error">Error writing XML!</string>
+    <string name="xml_export_success">XML export successful!</string>    
+    <string name="xml_sdcard_unmounted">SD card not mounted!</string>
+    
+    <string name="title_dialog_xml">ADW Launcher Settings</string>
+    <string name="message_dialog_import">Import settings from XML? ADW.Launcher will be restarted.</string>
+    <string name="message_dialog_export">Export settings to XML? Any existing file will be overwritten.</string>
+    
 </resources>

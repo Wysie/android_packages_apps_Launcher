@@ -104,7 +104,7 @@
 			android:key="previewsFullScreen" />
 	</PreferenceScreen>
 	<PreferenceScreen
-		android:key="buttonPrerefences"
+		android:key="buttonPreferences"
 		android:summary="@string/pref_summary_ui_settings"
 		android:title="@string/pref_title_ui_settings">
 		<ListPreference
@@ -162,8 +162,21 @@
 			android:title="@string/pref_title_icon_highlights"
 			android:summary="@string/pref_summary_icon_highlights"
 	        android:defaultValue="-16777216" />
-
 	</PreferenceScreen>
+	
+	<PreferenceScreen
+	    android:key="xmlPreferences"
+		android:title="@string/pref_title_xml">
+		<Preference
+		    android:title="@string/pref_title_xml_import"
+		    android:summary="@string/pref_summary_xml_import"
+			android:key="xml_import" />
+		<Preference
+		    android:title="@string/pref_title_xml_export"
+		    android:summary="@string/pref_summary_xml_export"
+			android:key="xml_export" />
+	</PreferenceScreen>
+	
 	<PreferenceCategory android:title="@string/pref_title_build_info">
 		<Preference
 			android:key="donatePref"
