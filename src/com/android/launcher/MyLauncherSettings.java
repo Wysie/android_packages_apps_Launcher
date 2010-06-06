@@ -337,57 +337,6 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 						    editor.putInt(prefType, Integer.parseInt(prefValue));
 						}
 						
-						/*
-						if (prefType.equals("wallpaperHack")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("desktopRotation")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("hideStatusbar")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("drawerNew")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("drawerAnimated")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("previewsNew")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("previewsFullScreen")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiDots")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiDockbar")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiCloseDockbar")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiLAB")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiRAB")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiTint")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiAppsBg")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}						
-						else if (prefType.equals("uiABBg")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						else if (prefType.equals("uiHideLabels")) {
-						    editor.putBoolean(prefType, Boolean.parseBoolean(prefValue));
-						}
-						*/
-
 						break;
                 }
                 eventType = parser.next();
