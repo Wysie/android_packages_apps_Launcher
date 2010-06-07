@@ -628,7 +628,6 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 	}
 	
     // From irrenhaus advanced launcher
-    // Root is required for the sqlite3 part it seems
 	public void restoreConfigBackup() {
 		String dbFile = Environment.getDataDirectory() + "/data/" + NAMESPACE + "/databases/launcher.db";
 		String dbInFile = Environment.getExternalStorageDirectory() + "/" + "adw_launcher.sql";
@@ -639,7 +638,9 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
             return;		
 		}		
 
-		CommandHandler rmDb = new CommandHandler(false, "rm " + dbFile);		
+		CommandHandler rmDb = new CommandHandler(false, "rm " + dbFile);
+		
+		// root required :(
 		CommandHandler readDb = new CommandHandler(true, "sqlite3 " + dbFile + " \".read " +  dbInFile + "\"");		
 		rmDb.start();
 
@@ -651,6 +652,7 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 
 		DBHelper helper = new DBHelper(mContext);
 		helper.getWritableDatabase();
+		helper.close();
 		readDb.start();
 		
 		try {
@@ -695,15 +697,15 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         }
         
         public void destroy() {
-                try {
-                        if (this.process != null) {
-                                this.process.destroy();
-                        }
-                        this.interrupt();
+            try {
+                if (this.process != null) {
+                    this.process.destroy();
                 }
-                catch (Exception ex) {
-                        // nothing
-                }
+                this.interrupt();
+            }
+            catch (Exception ex) {
+                // nothing
+            }
         }
         
         public void run() {
