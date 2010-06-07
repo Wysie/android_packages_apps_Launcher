@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -19,54 +20,30 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.Preference.OnPreferenceClickListener;
-
-import java.util.Calendar;
-
-import java.io.FileReader;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserFactory;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import org.xmlpull.v1.XmlPullParserException;
-import android.graphics.Color;
 import android.widget.Toast;
-import java.io.FileWriter;
-import org.xmlpull.v1.XmlSerializer;
-import android.util.Xml;
-import java.util.ArrayList;
-import java.io.File;
-import android.util.Log;
-import java.io.DataOutputStream;
-import java.io.InputStreamReader;
-import java.io.InputStream;
-import java.io.BufferedReader;
-import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteException;
+
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.util.Calendar;
 
 public class MyLauncherSettings extends PreferenceActivity implements OnPreferenceChangeListener {
 
     private static final String ALMOSTNEXUS_PREFERENCES = "launcher.preferences.almostnexus";
-    private boolean shouldRestart=false;
-    private static final String FROYOMSG="Changing this setting will make the Launcher restart itself";
-    private static final String NORMALMSG="Changing this setting will make the Launcher restart itself";   
-    private String mMsg;
+    private boolean shouldRestart = false;
+    private static final String mMsg = "Changing this setting will make the Launcher restart itself";
     private Context mContext;
     
-    private static final String XML_FILENAME = "adw_settings.xml";
+    private static final String PREF_BACKUP_FILENAME = "adw_settings.xml";
+    private static final String CONFIG_BACKUP_FILENAME = "adw_launcher.db";
     private static final String NAMESPACE = "com.android.launcher";
-    
     
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
 		//TODO: ADW should i read stored values after addPreferencesFromResource?
-		mMsg=(Build.VERSION.SDK_INT>=8)?FROYOMSG:NORMALMSG;
         super.onCreate(savedInstanceState);
         getPreferenceManager().setSharedPreferencesName(ALMOSTNEXUS_PREFERENCES);
         addPreferencesFromResource(R.xml.launcher_settings);
@@ -108,6 +85,29 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         uiHideLabels.setOnPreferenceChangeListener(this);
         mContext=this;
         
+        Preference exportToXML = findPreference("xml_export");
+        exportToXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
+			public boolean onPreferenceClick(Preference preference) {
+                AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
+                alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
+                alertDialog.setMessage(getResources().getString(R.string.message_dialog_export));
+                alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getResources().getString(android.R.string.ok), 
+                    new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        new ExportPrefsTask().execute();
+                    }
+                });
+                alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(android.R.string.cancel), 
+                    new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                    
+                    }
+                });
+                alertDialog.show();
+                return true;
+            }
+        });
+        
         Preference importFromXML = findPreference("xml_import");
         importFromXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {
 			public boolean onPreferenceClick(Preference preference) {
@@ -117,7 +117,7 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
                 alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getResources().getString(android.R.string.ok), 
                     new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        importXML();
+                        new ImportPrefsTask().execute();
                     }
                 });
                 alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(android.R.string.cancel), 
@@ -130,17 +130,17 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
                 return true;
             }
         });        
-        
-        Preference exportToXML = findPreference("xml_export");
-        exportToXML.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
+
+        Preference exportConfig = findPreference("db_export");
+        exportConfig.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
 			public boolean onPreferenceClick(Preference preference) {
                 AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
                 alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
-                alertDialog.setMessage(getResources().getString(R.string.message_dialog_export));
+                alertDialog.setMessage(getResources().getString(R.string.message_dialog_export_config));
                 alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getResources().getString(android.R.string.ok), 
                     new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        exportXML();
+                        new ExportDatabaseTask().execute();
                     }
                 });
                 alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(android.R.string.cancel), 
@@ -175,30 +175,8 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
                 alertDialog.show();
                 return true;
             }
-        });
-        
-        Preference exportConfig = findPreference("db_export");
-        exportConfig.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
-			public boolean onPreferenceClick(Preference preference) {
-                AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
-                alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
-                alertDialog.setMessage(getResources().getString(R.string.message_dialog_export_config));
-                alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getResources().getString(android.R.string.ok), 
-                    new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        new ExportDatabaseTask().execute();
-                    }
-                });
-                alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(android.R.string.cancel), 
-                    new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                    
-                    }
-                });
-                alertDialog.show();
-                return true;
-            }
-        });
+        });        
+
     }
     
 	@Override
@@ -318,259 +296,94 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 			alert.show();
     		getPreferenceManager().getSharedPreferences().edit().putInt("highlights_color", color).commit();
     	}
-    };
+    };   
     
-    // Wysie: Lazy way
-    private void importXML() {
-        if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-            Toast.makeText(mContext, R.string.xml_sdcard_unmounted, Toast.LENGTH_SHORT).show();
-            return;
+	// Wysie: Adapted from http://code.google.com/p/and-examples/source/browse/#svn/trunk/database/src/com/totsp/database
+    private class ExportPrefsTask extends AsyncTask<Void, Void, String> {
+        private final ProgressDialog dialog = new ProgressDialog(mContext);
+
+        // can use UI thread here
+        protected void onPreExecute() {
+            this.dialog.setMessage(getResources().getString(R.string.xml_export_dialog));
+            this.dialog.show();
         }
-        
-        FileReader reader = null;
-        boolean success = false;
-                
-        try {
-            reader = new FileReader(new File(Environment.getExternalStorageDirectory() + "/" + XML_FILENAME));
-            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-            XmlPullParser parser = factory.newPullParser();
-            parser.setInput(reader);
-            int eventType = parser.getEventType();
-            String prefType = null;
-            String prefValue = null;
-            SharedPreferences sp = mContext.getSharedPreferences(ALMOSTNEXUS_PREFERENCES, mContext.MODE_PRIVATE);
-            SharedPreferences.Editor editor = sp.edit();
-            
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                switch (eventType) {
-                    case XmlPullParser.START_TAG:
-						prefType = parser.getName().trim();
-						
-						if (prefType.equals("adw_settings")) {
-						    break;
-						}
-						
-						prefValue = parser.nextText();
-						
-						// Handle all booleans
-						if (prefValue.equals("true") || prefValue.equals("false")) {
-						    editor.putBoolean(prefType, prefValue.equals("true"));
-						}
-						// Handle the rest
-						else if (prefType.equals("desktopScreens")) {
-						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 2));
-						}
-						else if (prefType.equals("defaultScreen")) {
-						    editor.putInt(prefType, Integer.parseInt(prefValue));
-						}
-						else if (prefType.equals("desktopSpeed")) {
-						    editor.putInt(prefType, Integer.parseInt(prefValue));
-						}
-						else if (prefType.equals("desktopBounce")) {
-						    editor.putInt(prefType, Integer.parseInt(prefValue));
-						}
-						else if (prefType.equals("zoomSpeed")) {
-						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 300));
-						}
-						else if (prefType.equals("drawerAlpha")) {
-						    editor.putInt(prefType, Integer.parseInt(prefValue));
-						}
-						else if (prefType.equals("drawerColumnsPortrait")) {
-						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
-						}
-						else if (prefType.equals("drawerRowsPortrait")) {
-						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
-						}
-						else if (prefType.equals("drawerColumnsLandscape")) {
-						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
-						}
-						else if (prefType.equals("drawerRowsLandscape")) {
-						    editor.putInt(prefType, (Integer.parseInt(prefValue) - 1));
-						}
-						else if (prefType.equals("homeBinding")) {
-						    editor.putString(prefType, prefValue);
-						}
-						else if (prefType.equals("uiScaleAB")) {
-						    float value = Float.parseFloat(prefValue) * 10f;
-						    editor.putInt(prefType, Math.round(value - 1));
-						}
-						else if (prefType.equals("highlights_color")) {
-						    editor.putInt(prefType, Integer.parseInt(prefValue));
-						}
-						
-						break;
-                }
-                eventType = parser.next();
+
+      // automatically done on worker thread (separate from UI thread)
+        protected String doInBackground(final Void... args) {
+            if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+                return getResources().getString(R.string.import_export_sdcard_unmounted);
             }
-            editor.commit();
-            success = true;
+
+            File prefFile = new File(Environment.getDataDirectory() + "/data/" + NAMESPACE + 
+                            "/shared_prefs/launcher.preferences.almostnexus.xml");            
+            File file = new File(Environment.getExternalStorageDirectory(), PREF_BACKUP_FILENAME);
+
+            try {
+                file.createNewFile();
+                copyFile(prefFile, file);
+                return getResources().getString(R.string.xml_export_success);
+            } catch (IOException e) {
+                return getResources().getString(R.string.xml_export_error);
+            }
         }
-        catch (FileNotFoundException e) {
-            Toast.makeText(mContext, R.string.xml_file_not_found, Toast.LENGTH_SHORT).show();
-        }
-        catch (IOException e) {
-            Toast.makeText(mContext, R.string.xml_io_exception, Toast.LENGTH_SHORT).show();
-        }
-        catch (XmlPullParserException e) {
-            Toast.makeText(mContext, R.string.xml_parse_error, Toast.LENGTH_SHORT).show();
-        }
-        finally {
-            if (reader != null) {
-        		try {
-	        	    reader.close();
-	        	} catch (IOException e) {
-	        	}
-	        }
-        }
-        
-        if (success) {
-            Toast.makeText(mContext, R.string.xml_import_success, Toast.LENGTH_SHORT).show();
-            shouldRestart = true;
+
+        // can use UI thread here
+        protected void onPostExecute(final String msg) {
+            if (this.dialog.isShowing()) {
+                this.dialog.dismiss();
+            }
+            Toast.makeText(mContext, msg, Toast.LENGTH_SHORT).show();
         }
     }
-    
-    private void exportXML() {
-        if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-            Toast.makeText(mContext, R.string.xml_sdcard_unmounted, Toast.LENGTH_SHORT).show();
-            return;
-        }        
-        
-        FileWriter writer = null;
-        File outFile = new File(Environment.getExternalStorageDirectory() + "/" + "tempADWSettings.xml");
-        boolean success = false;
-        
-        try {            
-            outFile.createNewFile();
-            writer = new FileWriter(outFile);
-            XmlSerializer serializer = Xml.newSerializer();
-            serializer.setOutput(writer);
-            
-            // Start XML
-            serializer.startDocument("UTF-8", true);
-            serializer.startTag("", "adw_settings");            
-            
-            // Screen Prefs
-            serializer.startTag("", "wallpaperHack");
-            serializer.text("" + AlmostNexusSettingsHelper.getWallpaperHack(this));
-            serializer.endTag("", "wallpaperHack");            
-            serializer.startTag("", "desktopRotation");
-            serializer.text("" + AlmostNexusSettingsHelper.getDesktopRotation(this));
-            serializer.endTag("", "desktopRotation");            
-            serializer.startTag("", "hideStatusbar");
-            serializer.text("" + AlmostNexusSettingsHelper.getHideStatusbar(this));
-            serializer.endTag("", "hideStatusbar");            
-            serializer.startTag("", "desktopScreens");
-            serializer.text("" + AlmostNexusSettingsHelper.getDesktopScreens(this));
-            serializer.endTag("", "desktopScreens");            
-            serializer.startTag("", "defaultScreen");
-            serializer.text("" + AlmostNexusSettingsHelper.getDefaultScreen(this));
-            serializer.endTag("", "defaultScreen");            
-            serializer.startTag("", "desktopSpeed");
-            serializer.text("" + AlmostNexusSettingsHelper.getDesktopSpeed(this));
-            serializer.endTag("", "desktopSpeed");            
-            serializer.startTag("", "desktopBounce");
-            serializer.text("" + AlmostNexusSettingsHelper.getDesktopBounce(this));
-            serializer.endTag("", "desktopBounce");
-            
-            // Drawer Settings
-            serializer.startTag("", "zoomSpeed");
-            serializer.text("" + AlmostNexusSettingsHelper.getZoomSpeed(this));
-            serializer.endTag("", "zoomSpeed");            
-            serializer.startTag("", "drawerNew");
-            serializer.text("" + AlmostNexusSettingsHelper.getDrawerNew(this));
-            serializer.endTag("", "drawerNew");            
-            serializer.startTag("", "drawerAnimated");
-            serializer.text("" + AlmostNexusSettingsHelper.getDrawerAnimated(this));
-            serializer.endTag("", "drawerAnimated");            
-            serializer.startTag("", "drawerAlpha");
-            serializer.text("" + AlmostNexusSettingsHelper.getDrawerAlpha(this));
-            serializer.endTag("", "drawerAlpha");            
-            serializer.startTag("", "drawerColumnsPortrait");
-            serializer.text("" + AlmostNexusSettingsHelper.getColumnsPortrait(this));
-            serializer.endTag("", "drawerColumnsPortrait");            
-            serializer.startTag("", "drawerRowsPortrait");
-            serializer.text("" + AlmostNexusSettingsHelper.getRowsPortrait(this));
-            serializer.endTag("", "drawerRowsPortrait");            
-            serializer.startTag("", "drawerColumnsLandscape");
-            serializer.text("" + AlmostNexusSettingsHelper.getColumnsLandscape(this));
-            serializer.endTag("", "drawerColumnsLandscape");            
-            serializer.startTag("", "drawerRowsLandscape");
-            serializer.text("" + AlmostNexusSettingsHelper.getRowsLandscape(this));
-            serializer.endTag("", "drawerRowsLandscape");
-            
-            // Preview Settings
-            serializer.startTag("", "previewsNew");
-            serializer.text("" + AlmostNexusSettingsHelper.getNewPreviews(this));
-            serializer.endTag("", "previewsNew");            
-            serializer.startTag("", "previewsFullScreen");
-            serializer.text("" + AlmostNexusSettingsHelper.getFullScreenPreviews(this));
-            serializer.endTag("", "previewsFullScreen");
-            
-            // UI Settings
-            serializer.startTag("", "homeBinding");
-            serializer.text("" + AlmostNexusSettingsHelper.getHomeBinding(this));
-            serializer.endTag("", "homeBinding");            
-            serializer.startTag("", "uiDots");
-            serializer.text("" + AlmostNexusSettingsHelper.getUIDots(this));
-            serializer.endTag("", "uiDots");            
-            serializer.startTag("", "uiDockbar");
-            serializer.text("" + AlmostNexusSettingsHelper.getUIDockbar(this));
-            serializer.endTag("", "uiDockbar");            
-            serializer.startTag("", "uiCloseDockbar");
-            serializer.text("" + AlmostNexusSettingsHelper.getUICloseDockbar(this));
-            serializer.endTag("", "uiCloseDockbar");            
-            serializer.startTag("", "uiLAB");
-            serializer.text("" + AlmostNexusSettingsHelper.getUILAB(this));
-            serializer.endTag("", "uiLAB");            
-            serializer.startTag("", "uiRAB");
-            serializer.text("" + AlmostNexusSettingsHelper.getUIRAB(this));
-            serializer.endTag("", "uiRAB");            
-            serializer.startTag("", "uiTint");
-            serializer.text("" + AlmostNexusSettingsHelper.getUITint(this));
-            serializer.endTag("", "uiTint");            
-            serializer.startTag("", "uiScaleAB");
-            serializer.text("" + AlmostNexusSettingsHelper.getuiScaleAB(this));
-            serializer.endTag("", "uiScaleAB");            
-            serializer.startTag("", "uiAppsBg");
-            serializer.text("" + AlmostNexusSettingsHelper.getUIAppsBg(this));
-            serializer.endTag("", "uiAppsBg");            
-            serializer.startTag("", "uiABBg");
-            serializer.text("" + AlmostNexusSettingsHelper.getUIABBg(this));
-            serializer.endTag("", "uiABBg");            
-            serializer.startTag("", "uiHideLabels");
-            serializer.text("" + AlmostNexusSettingsHelper.getUIHideLabels(this));
-            serializer.endTag("", "uiHideLabels");            
-            serializer.startTag("", "highlights_color");
-            serializer.text("" + AlmostNexusSettingsHelper.getHighlightsColor(this));
-            serializer.endTag("", "highlights_color");
-            
-            // End XML
-            serializer.endTag("", "adw_settings");
-            serializer.endDocument();
-            serializer.flush();
-            success = true;
+
+	// Wysie: Adapted from http://code.google.com/p/and-examples/source/browse/#svn/trunk/database/src/com/totsp/database
+    private class ImportPrefsTask extends AsyncTask<Void, Void, String> {
+        private final ProgressDialog dialog = new ProgressDialog(mContext);
+
+        protected void onPreExecute() {
+            this.dialog.setMessage(getResources().getString(R.string.xml_import_dialog));
+            this.dialog.show();
         }
-        catch (Exception e) {
-            Toast.makeText(mContext, R.string.xml_write_error, Toast.LENGTH_SHORT).show();
+
+        // could pass the params used here in AsyncTask<String, Void, String> - but not being re-used
+        protected String doInBackground(final Void... args) {
+            if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+                return getResources().getString(R.string.import_export_sdcard_unmounted);
+            }
+            
+            File prefBackupFile = new File(Environment.getExternalStorageDirectory(), PREF_BACKUP_FILENAME);
+            
+            if (!prefBackupFile.exists()) {
+                return getResources().getString(R.string.xml_file_not_found);
+            } else if (!prefBackupFile.canRead()) {
+                return getResources().getString(R.string.xml_not_readable);
+            }
+            
+            File prefFile = new File(Environment.getDataDirectory() + "/data/" + NAMESPACE + 
+                            "/shared_prefs/launcher.preferences.almostnexus.xml");
+            
+            if (prefFile.exists()) {
+                prefFile.delete();
+            }
+
+            try {
+                prefFile.createNewFile();
+                copyFile(prefBackupFile, prefFile);
+                shouldRestart = true;
+                return getResources().getString(R.string.xml_import_success);
+            } catch (IOException e) {
+                return getResources().getString(R.string.xml_import_error);
+            }
         }
-        finally {
-            if (writer != null) {
-        		try {
-	        	    writer.close();
-	        	} catch (IOException e) {
-	        	}
-	        }
+
+        protected void onPostExecute(final String msg) {
+            if (this.dialog.isShowing()) {
+                this.dialog.dismiss();
+            }
+            
+            Toast.makeText(mContext, msg, Toast.LENGTH_SHORT).show();
         }
-        
-        if (success) {
-            File xmlFile = new File(Environment.getExternalStorageDirectory() + "/" + XML_FILENAME);
-            outFile.renameTo(xmlFile);
-            Toast.makeText(mContext, R.string.xml_export_success, Toast.LENGTH_SHORT).show();
-        }
-        
-        if (outFile.exists())
-            outFile.delete();
-    }    
+    }
 	
 	// Wysie: Adapted from http://code.google.com/p/and-examples/source/browse/#svn/trunk/database/src/com/totsp/database
     private class ExportDatabaseTask extends AsyncTask<Void, Void, String> {
@@ -578,25 +391,25 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 
         // can use UI thread here
         protected void onPreExecute() {
-            this.dialog.setMessage("Exporting database...");
+            this.dialog.setMessage(getResources().getString(R.string.dbfile_export_dialog));
             this.dialog.show();
         }
 
       // automatically done on worker thread (separate from UI thread)
         protected String doInBackground(final Void... args) {
             if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-                return getResources().getString(R.string.xml_sdcard_unmounted);
+                return getResources().getString(R.string.import_export_sdcard_unmounted);
             }
 
             File dbFile = new File(Environment.getDataDirectory() + "/data/" + NAMESPACE + "/databases/launcher.db");            
-            File file = new File(Environment.getExternalStorageDirectory(), "adw_launcher.db");
+            File file = new File(Environment.getExternalStorageDirectory(), CONFIG_BACKUP_FILENAME);
 
             try {
                 file.createNewFile();
                 copyFile(dbFile, file);
                 return getResources().getString(R.string.dbfile_export_success);
             } catch (IOException e) {
-                return getResources().getString(R.string.dbfile_write_error);
+                return getResources().getString(R.string.dbfile_export_error);
             }
         }
 
@@ -614,17 +427,17 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         private final ProgressDialog dialog = new ProgressDialog(mContext);
 
         protected void onPreExecute() {
-            this.dialog.setMessage("Importing database...");
+            this.dialog.setMessage(getResources().getString(R.string.dbfile_import_dialog));
             this.dialog.show();
         }
 
         // could pass the params used here in AsyncTask<String, Void, String> - but not being re-used
         protected String doInBackground(final Void... args) {
             if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-                return getResources().getString(R.string.xml_sdcard_unmounted);
+                return getResources().getString(R.string.import_export_sdcard_unmounted);
             }
             
-            File dbBackupFile = new File(Environment.getExternalStorageDirectory(), "adw_launcher.db");
+            File dbBackupFile = new File(Environment.getExternalStorageDirectory(), CONFIG_BACKUP_FILENAME);
             
             if (!dbBackupFile.exists()) {
                 return getResources().getString(R.string.dbfile_not_found);
