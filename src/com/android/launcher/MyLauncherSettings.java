@@ -564,18 +564,18 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
             outFile.delete();
     }
     
-    //WYsie: TODO: Find out a non-root method, if possible
     // From irrenhaus advanced launcher
+    // Root is not required for export
     public void createConfigBackup() {
         if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             Toast.makeText(mContext, R.string.xml_sdcard_unmounted, Toast.LENGTH_SHORT).show();
             return;
         }
         
-		String dbFile = "/data/data/" + NAMESPACE + "/databases/launcher.db";
+		String dbFile = Environment.getDataDirectory() + "/data/" + NAMESPACE + "/databases/launcher.db";
 		String dbOutFile = Environment.getExternalStorageDirectory() + "/" + "adw_launcher.sql";
 		
-		CommandHandler bkupDb = new CommandHandler(true, "sqlite3 " + dbFile + " .dump");
+		CommandHandler bkupDb = new CommandHandler(false, "sqlite3 " + dbFile + " .dump");
 		bkupDb.start();
 		
 		try {
@@ -628,8 +628,9 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
 	}
 	
     // From irrenhaus advanced launcher
+    // Root is required for the sqlite3 part it seems
 	public void restoreConfigBackup() {
-		String dbFile = "/data/data/" + NAMESPACE + "/databases/launcher.db";
+		String dbFile = Environment.getDataDirectory() + "/data/" + NAMESPACE + "/databases/launcher.db";
 		String dbInFile = Environment.getExternalStorageDirectory() + "/" + "adw_launcher.sql";
 		File inFile = new File(dbInFile);
 		
@@ -638,7 +639,7 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
             return;		
 		}		
 
-		CommandHandler rmDb = new CommandHandler(true, "rm " + dbFile);		
+		CommandHandler rmDb = new CommandHandler(false, "rm " + dbFile);		
 		CommandHandler readDb = new CommandHandler(true, "sqlite3 " + dbFile + " \".read " +  dbInFile + "\"");		
 		rmDb.start();
 
