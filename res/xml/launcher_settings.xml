@@ -155,15 +155,27 @@
 	
 	<PreferenceScreen
 	    android:key="xmlPreferences"
-		android:title="@string/pref_title_xml">
-		<Preference
-		    android:title="@string/pref_title_xml_import"
-		    android:summary="@string/pref_summary_xml_import"
-			android:key="xml_import" />
-		<Preference
-		    android:title="@string/pref_title_xml_export"
-		    android:summary="@string/pref_summary_xml_export"
-			android:key="xml_export" />
+		android:title="@string/pref_title_import_export">
+		<PreferenceCategory android:title="@string/pref_title_xml">
+    		<Preference
+	    	    android:title="@string/pref_title_xml_import"
+	    	    android:summary="@string/pref_summary_xml_import"
+	    		android:key="xml_import" />
+	    	<Preference
+	    	    android:title="@string/pref_title_xml_export"
+	    	    android:summary="@string/pref_summary_xml_export"
+	    		android:key="xml_export" />
+        </PreferenceCategory>
+		<PreferenceCategory android:title="@string/pref_title_db">
+    		<Preference
+	    	    android:title="@string/pref_title_db_import"
+	    	    android:summary="@string/pref_summary_db_import"
+	    		android:key="db_import" />
+	    	<Preference
+	    	    android:title="@string/pref_title_db_export"
+	    	    android:summary="@string/pref_summary_db_export"
+	    		android:key="db_export" />
+        </PreferenceCategory>
 	</PreferenceScreen>
 	
 	<PreferenceCategory android:title="@string/pref_title_build_info">

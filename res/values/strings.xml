@@ -252,11 +252,18 @@
     <string name="pref_title_icon_highlights">Highlights color</string>
     <string name="pref_summary_icon_highlights">Set the color for icon selections</string>
     
-    <string name="pref_title_xml">Import/export settings</string>
+    <string name="pref_title_import_export">Import/export</string>
+    <string name="pref_title_xml">ADW settings</string>
     <string name="pref_title_xml_import">Import settings from XML</string>
     <string name="pref_summary_xml_import">Import from /sdcard/adw_settings.xml</string>
     <string name="pref_title_xml_export">Export settings to XML</string>
     <string name="pref_summary_xml_export">Export to /sdcard/adw_settings.xml</string>
+    
+    <string name="pref_title_db">Desktop configuration (root required)</string>
+    <string name="pref_title_db_import">Import desktop configuration</string>
+    <string name="pref_summary_db_import">Import from /sdcard/adw_launcher.sql</string>
+    <string name="pref_title_db_export">Export desktop configuration</string>
+    <string name="pref_summary_db_export">Export to /sdcard/adw_launcher.sql</string>
     
     <!-- XML Import/Export strings -->
     <string name="xml_file_not_found">XML file not found!</string>
@@ -270,6 +277,13 @@
     <string name="title_dialog_xml">ADW Launcher Settings</string>
     <string name="message_dialog_import">Import settings from XML? ADW.Launcher will be restarted.</string>
     <string name="message_dialog_export">Export settings to XML? Any existing file will be overwritten.</string>
+    
+    <string name="message_dialog_import_config">Import desktop configuration? ADW.Launcher will be restarted.</string>
+    <string name="message_dialog_export_config">Export desktop configuration? Any existing file will be overwritten.</string>
+    
+    <string name="dbfile_write_error">Error exporting configuration!</string>
+    <string name="dbfile_export_success">Configuration exported successfully!</string>
+    <string name="dbfile_not_found">Configurable file not found!</string>
 
     <string name="pref_dialog_title_color_picker">Pick a color.</string>
     <string name="pref_dialog_message_color_picker">Tap on center color to confirm.\nPress back to cancel.</string>

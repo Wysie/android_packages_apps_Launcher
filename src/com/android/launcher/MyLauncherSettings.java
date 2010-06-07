@@ -34,6 +34,13 @@ import org.xmlpull.v1.XmlSerializer;
 import android.util.Xml;
 import java.util.ArrayList;
 import java.io.File;
+import android.util.Log;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.BufferedReader;
+import 	android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteDatabase;
 
 public class MyLauncherSettings extends PreferenceActivity implements OnPreferenceChangeListener {
 
@@ -45,6 +52,7 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
     private Context mContext;
     
     private static final String XML_FILENAME = "adw_settings.xml";
+    private static final String NAMESPACE = "com.android.launcher";
     
     
 	@Override
@@ -136,8 +144,53 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
                 alertDialog.show();
                 return true;
             }
-        });        
-
+        });
+        
+        Preference importConfig = findPreference("db_import");
+        importConfig.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
+			public boolean onPreferenceClick(Preference preference) {
+                AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
+                alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
+                alertDialog.setMessage(getResources().getString(R.string.message_dialog_import_config));
+                alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getResources().getString(android.R.string.ok), 
+                    new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        restoreConfigBackup();
+                    }
+                });
+                alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(android.R.string.cancel), 
+                    new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                    
+                    }
+                });
+                alertDialog.show();
+                return true;
+            }
+        });
+        
+        Preference exportConfig = findPreference("db_export");
+        exportConfig.setOnPreferenceClickListener(new OnPreferenceClickListener() {        
+			public boolean onPreferenceClick(Preference preference) {
+                AlertDialog alertDialog = new AlertDialog.Builder(mContext).create();
+                alertDialog.setTitle(getResources().getString(R.string.title_dialog_xml));
+                alertDialog.setMessage(getResources().getString(R.string.message_dialog_export_config));
+                alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getResources().getString(android.R.string.ok), 
+                    new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        createConfigBackup();
+                    }
+                });
+                alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(android.R.string.cancel), 
+                    new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                    
+                    }
+                });
+                alertDialog.show();
+                return true;
+            }
+        });
     }
     
 	@Override
@@ -510,4 +563,226 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         if (outFile.exists())
             outFile.delete();
     }
+    
+    //WYsie: TODO: Find out a non-root method, if possible
+    // From irrenhaus advanced launcher
+    public void createConfigBackup() {
+        if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+            Toast.makeText(mContext, R.string.xml_sdcard_unmounted, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+		String dbFile = "/data/data/" + NAMESPACE + "/databases/launcher.db";
+		String dbOutFile = Environment.getExternalStorageDirectory() + "/" + "adw_launcher.sql";
+		
+		CommandHandler bkupDb = new CommandHandler(true, "sqlite3 " + dbFile + " .dump");
+		bkupDb.start();
+		
+		try {
+			bkupDb.join();
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		
+        FileWriter writer = null;
+        boolean success = false;
+		
+		try {
+            File outFile = new File(dbOutFile);
+            
+            if (!outFile.exists())
+                outFile.createNewFile();
+    
+            writer = new FileWriter(outFile);
+            			
+			ArrayList<String> lines = bkupDb.getStdOutLines();
+			
+			if(lines.size() > 0)
+			{
+				for(String line: lines)
+				{
+					writer.write(line);
+					writer.write("\n");
+				}
+			}
+			
+			writer.flush();
+			success = true;
+        }
+        catch (Exception e) {
+            Toast.makeText(mContext, R.string.dbfile_write_error, Toast.LENGTH_SHORT).show();
+        }
+        finally {
+            if (writer != null) {
+        		try {
+	        	    writer.close();
+	        	} catch (IOException e) {
+	        	}
+	        }
+        }
+        
+        if (success) {
+            Toast.makeText(mContext, R.string.dbfile_export_success, Toast.LENGTH_SHORT).show();
+        }
+        
+	}
+	
+    // From irrenhaus advanced launcher
+	public void restoreConfigBackup() {
+		String dbFile = "/data/data/" + NAMESPACE + "/databases/launcher.db";
+		String dbInFile = Environment.getExternalStorageDirectory() + "/" + "adw_launcher.sql";
+		File inFile = new File(dbInFile);
+		
+		if(!inFile.exists()) {
+            Toast.makeText(mContext, R.string.dbfile_not_found, Toast.LENGTH_SHORT).show();
+            return;		
+		}		
+
+		CommandHandler rmDb = new CommandHandler(true, "rm " + dbFile);		
+		CommandHandler readDb = new CommandHandler(true, "sqlite3 " + dbFile + " \".read " +  dbInFile + "\"");		
+		rmDb.start();
+
+		try {
+			rmDb.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		DBHelper helper = new DBHelper(mContext);
+		helper.getWritableDatabase();
+		readDb.start();
+		
+		try {
+			readDb.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		shouldRestart = true;
+	}
+    
+    // From irrenhaus advanced launcher, which was taken from wifi-tether for root users
+    static class CommandHandler extends Thread {
+        
+        public static final String MSG_TAG = "ADW -> ExecuteProcess";
+        
+        private Process process = null;
+        private String command;
+        private Runtime runtime;
+        private ArrayList<String> stdOutLines;
+        private int exitCode = -1;
+        private boolean runAsRoot = false;
+
+        CommandHandler(String command) {
+                this.command = command;
+                this.runAsRoot = false;
+                this.runtime = Runtime.getRuntime();
+        }
+
+        CommandHandler(boolean runAsRoot, String command) {
+                this.command = command;
+                this.runAsRoot = runAsRoot;
+                this.runtime = Runtime.getRuntime();
+        }
+        
+        public int getExitCode() {
+                return this.exitCode;
+        }
+        
+        public ArrayList<String> getStdOutLines() {
+                return this.stdOutLines;
+        }
+        
+        public void destroy() {
+                try {
+                        if (this.process != null) {
+                                this.process.destroy();
+                        }
+                        this.interrupt();
+                }
+                catch (Exception ex) {
+                        // nothing
+                }
+        }
+        
+        public void run() {
+            DataOutputStream os = null;
+            InputStream stderr = null;
+            InputStream stdout = null;
+            String line;
+            
+            this.stdOutLines = new ArrayList<String>();
+            Log.d(MSG_TAG, "Executing command (root:"+this.runAsRoot+"): " + command);
+            
+            try {
+                this.runtime.gc();
+                
+                if (this.runAsRoot) {
+                    this.process = this.runtime.exec("su");
+                }
+                else {
+                    this.process = this.runtime.exec(command);
+                }
+                
+                stderr = this.process.getErrorStream();
+                stdout = this.process.getInputStream();
+                BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
+                BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
+                
+                if (this.runAsRoot) {
+                    os = new DataOutputStream(process.getOutputStream());
+                    os.writeBytes(command+"\n");
+                    os.flush();
+                    os.writeBytes("exit\n");
+                    os.flush();
+                }
+                
+                while ((line = inputBr.readLine()) != null) {
+                    stdOutLines.add(line.trim());
+                    Log.d(MSG_TAG, "STDOUT: "+line.trim());
+                }
+                
+                while ((line = errBr.readLine()) != null);
+                
+                this.exitCode = this.process.waitFor();
+            } catch (Exception e) {
+                Log.d(MSG_TAG, "Unexpected error - Here is what I know: "+e.getMessage());
+            } finally {
+                // Closing streams
+                try {
+                    if (os != null)
+                        os.close();
+                    if (stderr != null)
+                        stderr.close();
+                    if (stdout != null)
+                        stdout.close();
+                } catch (Exception ex) {;}
+                // Destroy process
+                try {
+                    this.process.destroy();
+                } catch (Exception e) {;}
+            }
+        }
+	}
+	
+	protected static class DBHelper extends SQLiteOpenHelper {
+		private Context context;
+		
+		public DBHelper(Context context) {
+			super(context, "launcher.db", null, 1);			
+			this.context = context;
+		}
+
+		@Override
+		public void onCreate(SQLiteDatabase db) {
+		    //Do nothing, since the file to be read in already has the create code
+		}
+
+		@Override
+		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+		    //Do nothing, since launcher.db has already been deleted
+		}
+
+	}
+    
 }
