@@ -39,8 +39,9 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.BufferedReader;
-import 	android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 
 public class MyLauncherSettings extends PreferenceActivity implements OnPreferenceChangeListener {
 
@@ -565,7 +566,6 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
     }
     
     // From irrenhaus advanced launcher
-    // Root is not required for export
     public void createConfigBackup() {
         if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             Toast.makeText(mContext, R.string.xml_sdcard_unmounted, Toast.LENGTH_SHORT).show();
@@ -627,38 +627,50 @@ public class MyLauncherSettings extends PreferenceActivity implements OnPreferen
         
 	}
 	
-    // From irrenhaus advanced launcher
 	public void restoreConfigBackup() {
 		String dbFile = Environment.getDataDirectory() + "/data/" + NAMESPACE + "/databases/launcher.db";
 		String dbInFile = Environment.getExternalStorageDirectory() + "/" + "adw_launcher.sql";
 		File inFile = new File(dbInFile);
+		BufferedReader reader = null;
 		
-		if(!inFile.exists()) {
-            Toast.makeText(mContext, R.string.dbfile_not_found, Toast.LENGTH_SHORT).show();
-            return;		
-		}		
-
-		CommandHandler rmDb = new CommandHandler(false, "rm " + dbFile);
-		
-		// root required :(
-		CommandHandler readDb = new CommandHandler(true, "sqlite3 " + dbFile + " \".read " +  dbInFile + "\"");		
-		rmDb.start();
-
 		try {
-			rmDb.join();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		    reader = new BufferedReader(new FileReader(inFile));
 		}
-
-		DBHelper helper = new DBHelper(mContext);
-		helper.getWritableDatabase();
-		helper.close();
-		readDb.start();
+		catch (FileNotFoundException e) {
+            Toast.makeText(mContext, R.string.dbfile_not_found, Toast.LENGTH_SHORT).show();
+            return;
+		}
+		
+		SQLiteDatabase dBase = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
+		String input = null;
+		
+		String dropFavTable = "drop table if exists favorites;";
+		String dropMetaTable = "drop table if exists android_metadata;";
+		String dropGesturesTable = "drop table if exists gestures;";
+		
+		dBase.execSQL(dropFavTable);
+		dBase.execSQL(dropMetaTable);
+		dBase.execSQL(dropGesturesTable);
 		
 		try {
-			readDb.join();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+    		while ((input = reader.readLine()) != null) {
+    		    try {
+                    dBase.execSQL(input);
+                } catch (SQLiteException e) {
+                    ;
+                }
+	    	}
+        }
+		catch (IOException e) {
+		    // Some error
+		}
+		finally {
+		    dBase.close();
+    		try {
+                reader.close();
+	    	}
+	    	catch (IOException e) {
+	    	}
 		}
 		
 		shouldRestart = true;
